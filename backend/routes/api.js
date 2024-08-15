@@ -84,10 +84,10 @@ router.post("/login", async (req, res) => {
 
 router.post("/api/add", verifyToken, async (req, res) => {
   try {
-    const { name, endpoint, owner, status } = req.body;
+    const { name, endpoint, owner, status, version, description } = req.body;
 
     // Validate the required fields
-    if (!name || !endpoint || !owner || !status) {
+    if (!name || !endpoint || !owner || !status || !version || !description) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -97,6 +97,9 @@ router.post("/api/add", verifyToken, async (req, res) => {
       owner,
       status,
       lastScanned: new Date(),
+      creationDate: new Date(),
+      version,
+      description,
     });
 
     await newAPI.save();
@@ -112,6 +115,17 @@ router.get("/api/all", verifyToken, async (req, res) => {
   try {
     const apis = await API.find();
     res.status(200).json(apis);
+  } catch (error) {
+    console.error("Error fetching API:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get("/api/:apiId", verifyToken, async (req, res) => {
+  try {
+    const { apiId } = req.params;
+    const api = await API.findOne({ _id: apiId });
+    res.status(200).json(api);
   } catch (error) {
     console.error("Error fetching API:", error);
     res.status(500).json({ message: "Server error" });

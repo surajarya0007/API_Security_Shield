@@ -1,32 +1,38 @@
 'use client';
 import Layout from "@/components/Layout";
+import { version } from "os";
 import { useEffect, useState } from "react";
 
-// Sample data for APIs
-const initialApiData = [
-  { id: 1, name: "API 1", endpoint: "/api/v1/resource1", owner: "Team A", status: "Active", lastScanned: "2024-08-01" },
-  { id: 2, name: "API 2", endpoint: "/api/v1/resource2", owner: "Team B", status: "Inactive", lastScanned: "2024-07-15" },
-  { id: 3, name: "API 3", endpoint: "/api/v1/resource3", owner: "Team C", status: "Active", lastScanned: "2024-08-10" },
-  { id: 4, name: "API 4", endpoint: "/api/v1/resource4", owner: "Team D", status: "Active", lastScanned: "2024-08-12" },
-  { id: 5, name: "API 5", endpoint: "/api/v1/resource5", owner: "Team E", status: "Inactive", lastScanned: "2024-06-20" },
-];
-
 const ApiInventory = () => {
-  const [apiList, setApiList] = useState(initialApiData);
-  const [newApi, setNewApi] = useState({ name: "", endpoint: "", owner: "", status: "Active", lastScanned: "" });
+  const [apiList, setApiList] = useState([]);
+  const [newApi, setNewApi] = useState({ name: "", endpoint: "", owner: "", status: "Active", lastScanned: "", version: "", description: "" });
   const [searchTerm, setSearchTerm] = useState("");
   const [sortKey, setSortKey] = useState("name");
   const [sortDirection, setSortDirection] = useState("ascending");
 
-  useEffect(() => {
-    // Simulate real-time updates (you can replace this with actual API calls)
-    const interval = setInterval(() => {
-      console.log("Real-time update check...");
-      // Here you can fetch new data or check for updates
-    }, 30000); // Check every 30 seconds
 
-    return () => clearInterval(interval);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    // Fetch API data from the server
+    const fetchApiData = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/api/all",
+        { method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }});
+        const data = await response.json();
+        console.log(data);
+        setApiList(data);
+      } catch (error) {
+        console.error("Error fetching API data:", error);
+      }
+    };
+
+    fetchApiData();
+
   }, []);
+
 
   const filteredApiList = apiList.filter(api =>
     api.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -53,15 +59,30 @@ const ApiInventory = () => {
 
   const sortedApiList = sortArray(filteredApiList, sortKey, sortDirection);
 
-  const handleAddApi = () => {
-    const newApiEntry = { id: apiList.length + 1, ...newApi, lastScanned: new Date().toISOString().split('T')[0] };
-    setApiList([...apiList, newApiEntry]);
-    setNewApi({ name: "", endpoint: "", owner: "", status: "Active", lastScanned: "" }); // Reset form
-  };
 
   const handleDeleteApi = (id) => {
     setApiList(apiList.filter(api => api.id !== id));
   };
+
+  const handleAddApi = async () => {
+    const newApiEntry = {
+      ...newApi,
+    };
+  
+    try {
+      const response = await fetch("http://localhost:5000/api/api/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newApiEntry),
+      });
+    } catch (error) {
+      console.error("Error adding API:", error);
+    }
+  };
+  
 
   return (
     <Layout>
@@ -145,10 +166,26 @@ const ApiInventory = () => {
               />
               <input
                 type="text"
+                placeholder="Description"
+                className="p-2 border border-gray-300 rounded"
+                value={newApi.description}
+                onChange={(e) => setNewApi({ ...newApi, description: e.target.value })}
+                required
+              />
+              <input
+                type="text"
                 placeholder="Owner"
                 className="p-2 border border-gray-300 rounded"
                 value={newApi.owner}
                 onChange={(e) => setNewApi({ ...newApi, owner: e.target.value })}
+                required
+              />
+              <input
+                type="text"
+                placeholder="Version"
+                className="p-2 border border-gray-300 rounded"
+                value={newApi.version}
+                onChange={(e) => setNewApi({ ...newApi, version: e.target.value })}
                 required
               />
               <select

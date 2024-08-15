@@ -1,45 +1,15 @@
 'use client';
-import { useState } from 'react';
+import { useParams } from 'next/navigation'
+import { useEffect, useState } from 'react';
 import Layout from "@/components/Layout";
 
 const ApiDetails = () => {
   // Dummy data for API details
-  const apiDetails = {
-    name: "API 1",
-    description: "This is a detailed description of API 1. It serves various functionalities related to data retrieval.",
-    endpoints: [
-      "https://api.example.com/v1/resource1",
-      "https://api.example.com/v1/resource2",
-      "https://api.example.com/v1/resource3"
-    ],
-    securityStatus: "Secure",
-    owner: "Team A",
-    creationDate: "2023-01-15",
-    lastUpdated: "2024-08-01",
-    version: "1.2.3",
-    documentationUrl: "https://docs.example.com/api1",
-  };
+  const params = useParams<{ tag: string; item: string }>()
 
-  // Dummy data for vulnerabilities
-  const vulnerabilities = [
-    {
-      id: 1,
-      description: "SQL Injection",
-      severity: "High",
-      remediation: "Sanitize inputs",
-      status: "Open",
-      discoveredDate: "2024-08-01",
-    },
-    {
-      id: 2,
-      description: "XSS",
-      severity: "Medium",
-      remediation: "Escape outputs",
-      status: "In Progress",
-      discoveredDate: "2024-07-15",
-    },
-  ];
-
+  const id = params.id;
+  const [apiDetails, setApiDetails] = useState([]);
+  const [vulnerabilities, setVulnerabilities] = useState([]);
   // Dummy data for audit logs
   const auditLogs = [
     {
@@ -62,13 +32,42 @@ const ApiDetails = () => {
     },
   ];
 
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    // Fetch API data from the server
+    const fetchApiData = async () => {
+      try {
+        if (id) {
+        const response = await fetch(`http://localhost:5000/api/api/${id}`,
+        { method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }});
+        const data = await response.json();
+        setApiDetails(data);
+        const vuln = [data.vulnerabilities];
+        if(data.vulnerabilities){
+          setVulnerabilities(data.vulnerabilities);
+        }
+      };
+      } catch (error) {
+        console.error("Error fetching API data:", error);
+      }
+    };
+
+    fetchApiData();
+
+  }, []);
+
+
   return (
     <Layout>
       <div className="container mx-auto p-6">
         {/* API Details Section */}
         <h2 className="text-2xl font-bold text-blue-900 mb-4">API Details</h2>
         <div className="bg-white p-6 shadow rounded-lg mb-6">
-          <h3 className="text-lg font-semibold text-blue-900">API Name: {apiDetails.name}</h3>
+          <h3 className="text-gray-700 mb-2"><strong>API Name:</strong> {apiDetails.name}</h3>
           <p className="text-gray-700 mb-2"><strong>Description:</strong> {apiDetails.description}</p>
           <p className="text-gray-700 mb-2"><strong>Owner:</strong> {apiDetails.owner}</p>
           <p className="text-gray-700 mb-2"><strong>Version:</strong> {apiDetails.version}</p>
@@ -77,11 +76,6 @@ const ApiDetails = () => {
           <p className="text-gray-700 mb-2"><strong>Current Security Status:</strong> {apiDetails.securityStatus}</p>
           <p className="text-gray-700 mb-2"><strong>Documentation URL:</strong> <a href={apiDetails.documentationUrl} className="text-blue-500 hover:underline">{apiDetails.documentationUrl}</a></p>
           <p className="text-gray-700 mb-2"><strong>Endpoints:</strong></p>
-          <ul className="list-disc list-inside mb-4">
-            {apiDetails.endpoints.map((endpoint, index) => (
-              <li key={index} className="text-gray-700">{endpoint}</li>
-            ))}
-          </ul>
         </div>
 
         {/* Vulnerability List Section */}
@@ -98,15 +92,21 @@ const ApiDetails = () => {
               </tr>
             </thead>
             <tbody>
-              {vulnerabilities.map((vuln, index) => (
-                <tr key={vuln.id} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                  <td className="p-3 border-b border-gray-300">{vuln.description}</td>
-                  <td className="p-3 border-b border-gray-300">{vuln.severity}</td>
-                  <td className="p-3 border-b border-gray-300">{vuln.remediation}</td>
-                  <td className="p-3 border-b border-gray-300">{vuln.status}</td>
-                  <td className="p-3 border-b border-gray-300">{vuln.discoveredDate}</td>
+              {vulnerabilities.length > 0 ? (
+                vulnerabilities.map((vuln, index) => (
+                  <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                    <td className="p-3 border-b border-gray-300">{vuln.description}</td>
+                    <td className="p-3 border-b border-gray-300">{vuln.severity}</td>
+                    <td className="p-3 border-b border-gray-300">{vuln.remediation}</td>
+                    <td className="p-3 border-b border-gray-300">{vuln.status}</td>
+                    <td className="p-3 border-b border-gray-300">{vuln.discoveredDate}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="text-center p-3">No vulnerabilities found.</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

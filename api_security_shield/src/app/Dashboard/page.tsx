@@ -1,23 +1,14 @@
 'use client';
 import Layout from "@/components/Layout";
-import { useState } from "react";
-import { Bar, Pie } from "react-chartjs-2"; // For data visualization
-import 'chart.js/auto'; // To handle auto-registration of charts
+import { useEffect, useState } from "react";
+import { Bar, Pie } from "react-chartjs-2"; 
+import 'chart.js/auto';
+import Link from 'next/link';
 
 const Dashboard = () => {
-  const [apiInventory, setApiInventory] = useState([
-    { name: "API 1", description: "Description of API 1", owner: "Team A", creationDate: "2023-01-15", endpoints: 5 },
-    { name: "API 2", description: "Description of API 2", owner: "Team B", creationDate: "2023-02-20", endpoints: 3 },
-    { name: "API 3", description: "Description of API 3", owner: "Team C", creationDate: "2023-03-10", endpoints: 4 },
-    { name: "API 4", description: "Description of API 4", owner: "Team D", creationDate: "2023-04-05", endpoints: 2 },
-    { name: "API 5", description: "Description of API 5", owner: "Team E", creationDate: "2023-05-18", endpoints: 1 },
-  ]);
+  const [apiInventory, setApiInventory] = useState([]);
 
-  const [vulnerabilities, setVulnerabilities] = useState([
-    { description: "SQL Injection", cvss: 9.8, remediation: "Sanitize inputs", status: "Open", affectedApis: ["API 1"] },
-    { description: "XSS", cvss: 7.5, remediation: "Escape outputs", status: "In Progress", affectedApis: ["API 2"] },
-    { description: "CSRF", cvss: 6.0, remediation: "Use CSRF tokens", status: "Resolved", affectedApis: ["API 3"] },
-  ]);
+  const [vulnerabilities, setVulnerabilities] = useState([]);
 
   const [incidents, setIncidents] = useState([
     { type: "Data Breach", severity: "High", impact: "Customer Data", status: "Resolved", timeline: "2024-07-22" },
@@ -28,6 +19,49 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortKey, setSortKey] = useState('name');
   const [sortDirection, setSortDirection] = useState('descending');
+
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+  
+    // Fetch API data from the server
+    const fetchApiData = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/api/all", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        console.log(data);
+        // Filter APIs that have only "Closed" vulnerabilities
+        const filteredApiInventory = data.filter(api => 
+          api.vulnerabilities?.every(vuln => vuln.status === "Closed")
+        );
+  
+        // Extract vulnerabilities from the filtered APIs
+        const allVulnerabilities = data.reduce((acc, api) => {
+          if (api.vulnerabilities) {
+            return acc.concat(
+              api.vulnerabilities.map(vuln => ({
+                ...vuln,
+                affectedApis: [api.name],
+                affectedApiId: [api._id], // Include API name in vulnerability
+              }))
+            );
+          }
+          return acc;
+        }, []);
+        setApiInventory(filteredApiInventory);
+        setVulnerabilities(allVulnerabilities);
+      } catch (error) {
+        console.error("Error fetching API data:", error);
+      }
+    };
+  
+    fetchApiData();
+  }, []);
 
   // Data for charts
   const apiVulnerabilityData = {
@@ -65,6 +99,14 @@ const Dashboard = () => {
     incident.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredVulnerabilities = vulnerabilities
+    .filter(vuln => vuln.status === "Open")
+    .filter(vuln =>
+      vuln.affectedApis.some(api =>
+        api.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+
   // Sort function
   const sortArray = (array, key, direction) => {
     return [...array].sort((a, b) => {
@@ -88,6 +130,8 @@ const Dashboard = () => {
 
   const sortedApiInventory = sortArray(filteredApiInventory, sortKey, sortDirection);
 
+  console.log(vulnerabilities);
+
   return (
     <Layout>
       <div className="container mx-auto p-6">
@@ -97,7 +141,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <div className="bg-white p-6 shadow rounded-lg">
             <h3 className="text-lg font-semibold text-blue-900">Total APIs</h3>
-            <p className="text-gray-700">Number of APIs: {apiInventory.length}</p>
+            <p className="text-gray-700">Number of APIs: {apiInventory.length + vulnerabilities.length}</p>
           </div>
           <div className="bg-white p-6 shadow rounded-lg">
             <h3 className="text-lg font-semibold text-blue-900">Vulnerable APIs</h3>
@@ -127,7 +171,6 @@ const Dashboard = () => {
         </div>
 
         {/* Search Bar and Sort Dropdown for API Inventory */}
-        <h3 className="text-xl font-bold text-blue-900 mb-4">API Inventory</h3>
         <div className="mb-4 flex items-center space-x-4">
           <input
             type="text"
@@ -148,7 +191,7 @@ const Dashboard = () => {
             <option value="endpoints">Sort by Endpoints</option>
           </select>
         </div>
-
+        <h3 className="text-xl font-bold text-blue-900 mb-4">Secured API</h3>
         {/* API Inventory Table */}
         <div className="bg-white p-6 shadow rounded-lg mb-6">
           <table className="w-full text-left border-separate border-spacing-0">
@@ -164,11 +207,11 @@ const Dashboard = () => {
             <tbody>
               {sortedApiInventory.map((api, index) => (
                 <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                  <td className="p-3 border-b border-gray-300">{api.name}</td>
+                  <Link href={`/${api._id}`}><td className="p-3 border-b border-gray-300">{api.name}</td></Link>
                   <td className="p-3 border-b border-gray-300">{api.description}</td>
                   <td className="p-3 border-b border-gray-300">{api.owner}</td>
                   <td className="p-3 border-b border-gray-300">{api.creationDate}</td>
-                  <td className="p-3 border-b border-gray-300">{api.endpoints}</td>
+                  <td className="p-3 border-b border-gray-300">{api.endpoint}</td>
                 </tr>
               ))}
             </tbody>
@@ -189,7 +232,7 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {vulnerabilities.filter(vuln => 
+              {filteredVulnerabilities.filter(vuln => 
                 vuln.affectedApis.some(api => api.toLowerCase().includes(searchTerm.toLowerCase()))
               ).map((vuln, index) => (
                 <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
@@ -197,7 +240,7 @@ const Dashboard = () => {
                   <td className="p-3 border-b border-gray-300">{vuln.cvss}</td>
                   <td className="p-3 border-b border-gray-300">{vuln.remediation}</td>
                   <td className="p-3 border-b border-gray-300">{vuln.status}</td>
-                  <td className="p-3 border-b border-gray-300">{vuln.affectedApis.join(", ")}</td>
+                  <Link href={`/${vuln.affectedApiId}`}><td className="p-3 border-b border-gray-300">{vuln.affectedApis.join(", ")}</td></Link>
                 </tr>
               ))}
             </tbody>
