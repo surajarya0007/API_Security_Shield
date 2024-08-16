@@ -51,7 +51,7 @@ const ApiInventory: React.FC = () => {
       try {
             const decodedToken = jwtDecode(token);
             const userRole = decodedToken.role;
-          const response = await fetch(`http://localhost:5000/api/api/all?role=${userRole}`, {
+          const response = await fetch(`http://localhost:5000/api/admin/api`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,

@@ -332,6 +332,7 @@ import { useEffect, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2"; 
 import 'chart.js/auto';
 import Link from 'next/link';
+import { jwtDecode } from "jwt-decode";
 
 interface Vulnerability {
   status: string;
@@ -378,7 +379,9 @@ const Dashboard = () => {
   
     const fetchApiData = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/api/all", {
+          const decodedToken = jwtDecode(token);
+          const userRole = decodedToken.role;
+          const response = await fetch(`http://localhost:5000/api/admin/api`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,

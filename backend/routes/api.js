@@ -284,10 +284,9 @@ router.post("/api/add", verifyToken, async (req, res) => {
   }
 });
 
-
-router.get("/api/all:role", verifyToken, async (req, res) => {
+router.get("/:role/api", verifyToken, async (req, res) => {
   try {
-    const role = query.role;
+    const { role } = req.params;
 
     console.log("Requested role:", role);
 
@@ -296,10 +295,10 @@ router.get("/api/all:role", verifyToken, async (req, res) => {
     }
 
     let apis;
-    if (role === 'admin') {
-      apis = await Api.find();
-    } else if (role === 'user') {
-      apis = await Api.find({ role: 'user' });
+    if (role === "admin") {
+      apis = await API.find();
+    } else if (role === "user") {
+      apis = await API.find({ role: "user" });
     } else {
       return res.status(400).json({ message: "Invalid role" });
     }
@@ -310,9 +309,6 @@ router.get("/api/all:role", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-
-
-
 
 router.get("/api/:apiId", verifyToken, async (req, res) => {
   try {
