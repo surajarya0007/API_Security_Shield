@@ -381,7 +381,8 @@ const Dashboard = () => {
       try {
           const decodedToken = jwtDecode(token);
           const userRole = decodedToken.role;
-          const response = await fetch(`http://localhost:5000/api/admin/api`, {
+          const URL = `http://localhost:5000/api/${userRole}/api`;
+          const response = await fetch(URL, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,

@@ -20,6 +20,19 @@ const userSchema = new Schema({
     type: String,
     required: true,
   },
+  status: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+    required: true,
+  },
 });
 
 const User = mongoose.model("User", userSchema);
