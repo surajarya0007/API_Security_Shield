@@ -1,28 +1,59 @@
 'use client';
 import Layout from "@/components/Layout";
-import { version } from "os";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const ApiInventory = () => {
-  const [apiList, setApiList] = useState([]);
-  const [newApi, setNewApi] = useState({ name: "", endpoint: "", owner: "", status: "Active", lastScanned: "", version: "", description: "" });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortKey, setSortKey] = useState("name");
-  const [sortDirection, setSortDirection] = useState("ascending");
+// Define types for API data
+interface Api {
+  _id: any;
+  id: string;
+  name: string;
+  endpoint: string;
+  owner: string;
+  status: string;
+  lastScanned: string;
+  version: string;
+  description: string;
+}
 
+// Define types for new API entry
+interface NewApi {
+  name: string;
+  endpoint: string;
+  owner: string;
+  status: string;
+  lastScanned: string;
+  version: string;
+  description: string;
+}
+
+const ApiInventory: React.FC = () => {
+  const [apiList, setApiList] = useState<Api[]>([]);
+  const [newApi, setNewApi] = useState<NewApi>({
+    name: "",
+    endpoint: "",
+    owner: "",
+    status: "Active",
+    lastScanned: "",
+    version: "",
+    description: ""
+  });
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [sortKey, setSortKey] = useState<keyof Api>("name");
+  const [sortDirection, setSortDirection] = useState<"ascending" | "descending">("ascending");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     // Fetch API data from the server
     const fetchApiData = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/api/all",
-        { method: "GET",
+        const response = await fetch("http://localhost:5000/api/api/all", {
+          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
-          }});
-        const data = await response.json();
-        console.log(data);
+          },
+        });
+        const data: Api[] = await response.json();
         setApiList(data);
       } catch (error) {
         console.error("Error fetching API data:", error);
@@ -31,14 +62,33 @@ const ApiInventory = () => {
 
     fetchApiData();
 
+      // Setup WebSocket connection
+  const ws = new WebSocket('ws://localhost:8080');
+  
+  ws.onopen = () => {
+    console.log('Connected to WebSocket');
+  };
+
+  ws.onmessage = (event) => {
+    const newApi = JSON.parse(event.data);
+    setApiList(prevApiList => [...prevApiList, newApi]);
+  };
+
+  ws.onclose = () => {
+    console.log('Disconnected from WebSocket');
+  };
+
+  return () => {
+    ws.close();
+  };
+  
   }, []);
 
-
   const filteredApiList = apiList.filter(api =>
-    api.name.toLowerCase().includes(searchTerm.toLowerCase())
+    api.name && api.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const sortArray = (array, key, direction) => {
+  const sortArray = (array: Api[], key: keyof Api, direction: "ascending" | "descending") => {
     return [...array].sort((a, b) => {
       if (a[key] < b[key]) {
         return direction === "ascending" ? -1 : 1;
@@ -50,8 +100,8 @@ const ApiInventory = () => {
     });
   };
 
-  const handleSortChange = (event) => {
-    const selectedSortKey = event.target.value;
+  const handleSortChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedSortKey = event.target.value as keyof Api;
     const newDirection = (sortKey === selectedSortKey && sortDirection === "ascending") ? "descending" : "ascending";
     setSortKey(selectedSortKey);
     setSortDirection(newDirection);
@@ -59,16 +109,14 @@ const ApiInventory = () => {
 
   const sortedApiList = sortArray(filteredApiList, sortKey, sortDirection);
 
-
-  const handleDeleteApi = (id) => {
+  const handleDeleteApi = (id: string) => {
     setApiList(apiList.filter(api => api.id !== id));
   };
 
   const handleAddApi = async () => {
-    const newApiEntry = {
-      ...newApi,
-    };
-  
+    const token = localStorage.getItem("token");
+    const newApiEntry = { ...newApi };
+
     try {
       const response = await fetch("http://localhost:5000/api/api/add", {
         method: "POST",
@@ -78,11 +126,30 @@ const ApiInventory = () => {
         },
         body: JSON.stringify(newApiEntry),
       });
+
+      if (response.ok) {
+        const addedApi: Api = await response.json();
+        // Update the API list and reset the form
+        setApiList((prevApiList) => [...prevApiList, addedApi]);
+        setNewApi({
+          name: "",
+          endpoint: "",
+          owner: "",
+          status: "Active",
+          lastScanned: "",
+          version: "",
+          description: ""
+        });
+        alert("API added successfully");
+      } else {
+        console.error("Failed to add API");
+        alert("Failed to add API. Please try again.");
+      }
     } catch (error) {
       console.error("Error adding API:", error);
+      alert("An error occurred while adding the API.");
     }
   };
-  
 
   return (
     <Layout>
@@ -127,7 +194,7 @@ const ApiInventory = () => {
             <tbody>
               {sortedApiList.map(api => (
                 <tr key={api.id} className="bg-gray-50">
-                  <td className="p-3 border-b border-gray-300">{api.name}</td>
+                  <td className="p-3 border-b border-gray-300"><Link href={`/${api._id}`}>{api.name}</Link></td>
                   <td className="p-3 border-b border-gray-300">{api.endpoint}</td>
                   <td className="p-3 border-b border-gray-300">{api.owner}</td>
                   <td className="p-3 border-b border-gray-300">{api.status}</td>
