@@ -19,8 +19,8 @@ const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    phone: "",
-    username: ""
+    username: "",
+    role: "",
   });
 
 
@@ -127,13 +127,13 @@ const LoginPage: React.FC = () => {
           {!isLogin && (
           <div className="flex flex-col">
             <label htmlFor="phone" className="mb-1">
-              Phone
+              Role
             </label>
             <input
               type="text"
-              id="phone"
-              name="phone"
-              value={formData.phone}
+              id="role"
+              name="role"
+              value={formData.role}
               onChange={handleChange}
               className="border border-gray-300 rounded-md px-3 py-2"
             />

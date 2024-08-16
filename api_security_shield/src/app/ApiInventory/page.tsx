@@ -47,20 +47,19 @@ const ApiInventory: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    // Fetch API data from the server
     const fetchApiData = async () => {
       try {
             const decodedToken = jwtDecode(token);
-            const user = { 
-              email: decodedToken.email,
-              role: decodedToken.role
-            };
-        const response = await fetch(`http://localhost:5000/api/all?role=${user.role}`, {
+            const userRole = decodedToken.role;
+          const response = await fetch(`http://localhost:5000/api/api/all?role=${userRole}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+        if (!response.ok) {
+          throw new Error(`Error fetching API data: ${response.statusText}`);
+        }
         const data: Api[] = await response.json();
         setApiList(data);
       } catch (error) {

@@ -284,30 +284,35 @@ router.post("/api/add", verifyToken, async (req, res) => {
   }
 });
 
-router.get("/api/all", verifyToken, async (req, res) => {
-  try {
-    // Get the role from the query parameters
-    const { role } = req.query;
 
-    // Check if the role is provided
+router.get("/api/all:role", verifyToken, async (req, res) => {
+  try {
+    const role = query.role;
+
+    console.log("Requested role:", role);
+
     if (!role) {
       return res.status(400).json({ message: "Role parameter is required" });
     }
 
-    // Filter APIs based on the role
-    const apis = await Api.find({ role });
-
-    // If no APIs match the role, send a 404 response
-    if (apis.length === 0) {
-      return res.status(404).json({ message: "No APIs found for this role" });
+    let apis;
+    if (role === 'admin') {
+      apis = await Api.find();
+    } else if (role === 'user') {
+      apis = await Api.find({ role: 'user' });
+    } else {
+      return res.status(400).json({ message: "Invalid role" });
     }
 
-    res.status(200).json(apis);
+    return res.status(200).json(apis);
   } catch (error) {
     console.error("Error fetching API:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
+
+
 
 router.get("/api/:apiId", verifyToken, async (req, res) => {
   try {
