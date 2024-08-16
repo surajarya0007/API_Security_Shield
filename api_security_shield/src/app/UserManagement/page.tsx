@@ -242,8 +242,9 @@ const UserManagement = () => {
 
   const roles = ["Admin", "Security Analyst", "Developer"];
   const statuses = ["Active", "Inactive"];
-
+  const token = localStorage.getItem("token");
   useEffect(() => {
+    
     fetchUsers();
     fetchActivityLogs();
   }, []);
@@ -258,8 +259,15 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('/users');
-      setUsers(response.data);
+      const response = await fetch("http://localhost:5000/api/users", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data =  await response.json();
+      console.log(data);
+      setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
@@ -316,7 +324,9 @@ const UserManagement = () => {
 
   const handleDeleteUser = async () => {
     try {
-      await axios.delete(`/users/${deleteUser._id}`);
+      await axios.delete(`http://localhost:5000/api/users/${deleteUser._id}`, {headers: {
+        Authorization: `Bearer ${token}`,
+      }});
       setUsers(users.filter(user => user._id !== deleteUser._id));
       setDeleteUser(null);
       closeModal('delete');
@@ -452,24 +462,6 @@ const UserManagement = () => {
             className="border rounded p-2 w-full"
           />
         </div>
-        <table className="min-w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-gray-300 p-2">Username</th>
-              <th className="border border-gray-300 p-2">Action</th>
-              <th className="border border-gray-300 p-2">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLogs.map(log => (
-              <tr key={log._id} className="border border-gray-300">
-                <td className="border border-gray-300 p-2">{log.username}</td>
-                <td className="border border-gray-300 p-2">{log.action}</td>
-                <td className="border border-gray-300 p-2">{log.date}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </Layout>
   );

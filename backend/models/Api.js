@@ -40,6 +40,10 @@ const apiSchema = new mongoose.Schema({
   cvssscore: {
     type: String,
   },
+  role: {
+    type: String,
+    required: true,
+  },
   vulnerabilities: [
     {
       description: { type: String },

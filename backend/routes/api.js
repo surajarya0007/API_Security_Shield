@@ -84,7 +84,6 @@
 //   }
 // });
 
-
 // router.post("/api/add", verifyToken, async (req, res) => {
 //   try {
 //     const { name, endpoint, owner, status, version, description } = req.body;
@@ -140,7 +139,6 @@
 //   }
 // });
 
-
 // wss.on('connection', (ws) => {
 //   console.log('Client connected');
 
@@ -164,9 +162,6 @@
 
 // module.exports = router;
 
-
-
-
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
@@ -178,7 +173,7 @@ const Admin = require("../models/Admin");
 const API = require("../models/Api");
 const User = require("../models/User"); // New model
 const ActivityLog = require("../models/ActivityLog"); // New model
-const WebSocket = require('ws');
+const WebSocket = require("ws");
 const wss = new WebSocket.Server({ port: 8080 });
 
 const verifyToken = (req, res, next) => {
@@ -244,7 +239,7 @@ router.post("/login", async (req, res) => {
       return res.status(402).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ email: user.email }, SECRET_KEY, {
+    const token = jwt.sign({ email: user.email, role: user.role }, SECRET_KEY, {
       expiresIn: "24h",
     });
 
@@ -281,7 +276,7 @@ router.post("/api/add", verifyToken, async (req, res) => {
 
     res.status(201).json({
       message: "API added successfully",
-      api: newAPI // Include the newly created API in the response
+      api: newAPI, // Include the newly created API in the response
     });
   } catch (error) {
     console.error("Error adding API:", error);
@@ -291,7 +286,22 @@ router.post("/api/add", verifyToken, async (req, res) => {
 
 router.get("/api/all", verifyToken, async (req, res) => {
   try {
-    const apis = await API.find();
+    // Get the role from the query parameters
+    const { role } = req.query;
+
+    // Check if the role is provided
+    if (!role) {
+      return res.status(400).json({ message: "Role parameter is required" });
+    }
+
+    // Filter APIs based on the role
+    const apis = await Api.find({ role });
+
+    // If no APIs match the role, send a 404 response
+    if (apis.length === 0) {
+      return res.status(404).json({ message: "No APIs found for this role" });
+    }
+
     res.status(200).json(apis);
   } catch (error) {
     console.error("Error fetching API:", error);
@@ -323,23 +333,24 @@ router.get("/users", verifyToken, async (req, res) => {
 
 router.post("/users", verifyToken, async (req, res) => {
   try {
-    const { email, password, phone, username } = req.body;
-    
-    if (!email || !password || !phone || !username) {
+    const { email, password, phone, username, role } = req.body;
+
+    if (!email || !password || !phone || !username || !role) {
       return res.status(400).json({ message: "All fields are required" });
     }
-    
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       username,
       email,
       password: hashedPassword,
       phone,
+      role,
     });
     await newUser.save();
 
-    broadcast({ type: 'userAdded', data: newUser });
-    
+    broadcast({ type: "userAdded", data: newUser });
+
     res.status(201).json({ message: "User added successfully", user: newUser });
   } catch (error) {
     console.error("Error adding user:", error);
@@ -351,9 +362,11 @@ router.put("/users/:userId", verifyToken, async (req, res) => {
   try {
     const { userId } = req.params;
     const updates = req.body;
-    const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });
-    
-    broadcast({ type: 'userUpdated', data: updatedUser });
+    const updatedUser = await User.findByIdAndUpdate(userId, updates, {
+      new: true,
+    });
+
+    broadcast({ type: "userUpdated", data: updatedUser });
 
     res.status(200).json(updatedUser);
   } catch (error) {
@@ -366,16 +379,15 @@ router.delete("/users/:userId", verifyToken, async (req, res) => {
   try {
     const { userId } = req.params;
     const deletedUser = await User.findByIdAndDelete(userId);
-    
-    broadcast({ type: 'userDeleted', data: userId });
-    
+
+    broadcast({ type: "userDeleted", data: userId });
+
     res.status(204).end();
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
-
 
 // New API routes for activity logs
 router.get("/activity-logs", verifyToken, async (req, res) => {
@@ -391,36 +403,38 @@ router.get("/activity-logs", verifyToken, async (req, res) => {
 router.post("/activity-logs", verifyToken, async (req, res) => {
   try {
     const { action, description, timestamp } = req.body;
-    
+
     if (!action || !description || !timestamp) {
       return res.status(400).json({ message: "All fields are required" });
     }
-    
+
     const newLog = new ActivityLog({ action, description, timestamp });
     await newLog.save();
-    
-    res.status(201).json({ message: "Activity log added successfully", log: newLog });
+
+    res
+      .status(201)
+      .json({ message: "Activity log added successfully", log: newLog });
   } catch (error) {
     console.error("Error adding activity log:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-wss.on('connection', (ws) => {
-  console.log('Client connected');
+wss.on("connection", (ws) => {
+  console.log("Client connected");
 
-  ws.on('message', (message) => {
+  ws.on("message", (message) => {
     console.log(`Received message: ${message}`);
   });
 
-  ws.on('close', () => {
-    console.log('Client disconnected');
+  ws.on("close", () => {
+    console.log("Client disconnected");
   });
 });
 
 // Broadcast function to send messages to all connected clients
 const broadcast = (data) => {
-  wss.clients.forEach(client => {
+  wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(data));
     }

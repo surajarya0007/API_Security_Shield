@@ -1,5 +1,6 @@
 'use client';
 import Layout from "@/components/Layout";
+import { jwtDecode } from "jwt-decode";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -22,6 +23,7 @@ interface NewApi {
   endpoint: string;
   owner: string;
   status: string;
+  role: string;
   lastScanned: string;
   version: string;
   description: string;
@@ -34,6 +36,7 @@ const ApiInventory: React.FC = () => {
     endpoint: "",
     owner: "",
     status: "Active",
+    role: "",
     lastScanned: "",
     version: "",
     description: ""
@@ -47,7 +50,12 @@ const ApiInventory: React.FC = () => {
     // Fetch API data from the server
     const fetchApiData = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/api/all", {
+            const decodedToken = jwtDecode(token);
+            const user = { 
+              email: decodedToken.email,
+              role: decodedToken.role
+            };
+        const response = await fetch(`http://localhost:5000/api/all?role=${user.role}`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -136,6 +144,7 @@ const ApiInventory: React.FC = () => {
           endpoint: "",
           owner: "",
           status: "Active",
+          role: "",
           lastScanned: "",
           version: "",
           description: ""
