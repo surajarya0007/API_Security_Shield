@@ -30,29 +30,32 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-router.post("/admin/signup", async (req, res) => {
+router.post("/user/signup", async (req, res) => {
+  console.log(req.body);
   try {
-    const { email, password, phone, username } = req.body;
-    const existingAdmin = await Admin.findOne({ email });
+    const { email, password, role, username, fullname } = req.body;
+    const existingAdmin = await User.findOne({ email });
     if (existingAdmin) {
       return res
         .status(400)
-        .json({ message: "Admin with this email already exists" });
+        .json({ message: "User with this email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newAdmin = new Admin({
+    const newAdmin = new User({
       username,
+      fullname,
       email,
       password: hashedPassword,
-      phone,
+      role,
+  
     });
     await newAdmin.save();
 
-    res.status(201).json({ message: "Admin registered successfully" });
+    res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
-    console.error("Admin Signup error:", error);
+    console.error("User Signup error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -63,7 +66,7 @@ router.post("/login", async (req, res) => {
 
     let user;
 
-    user = await Admin.findOne({ email });
+    user = await User.findOne({ email });
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
@@ -71,7 +74,7 @@ router.post("/login", async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(402).json({ message: "Invalid credentials" });
+      return res.status(402).json({ message: "Invalid Pasword" });
     }
 
     const token = jwt.sign({ email: user.email, role: user.role }, SECRET_KEY, {
@@ -131,14 +134,13 @@ router.get("/:role/api", verifyToken, async (req, res) => {
     }
 
     let apis;
-    if (role === "admin") {
+    if (role === "Admin") {
       apis = await API.find();
     } else if (role) {
       apis = await API.find({ role });
     } else {
       return res.status(400).json({ message: "Invalid role" });
     }
-
     return res.status(200).json(apis);
   } catch (error) {
     console.error("Error fetching API:", error);
@@ -149,8 +151,19 @@ router.get("/:role/api", verifyToken, async (req, res) => {
 router.get("/api/:apiId", verifyToken, async (req, res) => {
   try {
     const { apiId } = req.params;
-    const api = await API.findOne({ _id: apiId });
-    res.status(200).json(api);
+    const userRole = req.user.role;
+    console.log("user role :" , userRole)
+    let apis;
+    if(userRole === "Admin"){
+      apis = await API.findOne({  _id: apiId });
+    }
+    else if(userRole){
+      apis = await API.findOne({ role: userRole, _id: apiId });
+    }
+    else {
+      return res.status(400).json({ message: "Not authorized" });
+    }
+    return res.status(200).json(apis);
   } catch (error) {
     console.error("Error fetching API:", error);
     res.status(500).json({ message: "Server error" });
