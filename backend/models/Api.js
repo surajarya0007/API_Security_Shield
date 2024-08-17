@@ -8,7 +8,7 @@ const apiSchema = new mongoose.Schema({
   endpoint: {
     type: String,
     required: true,
-  },
+  },  
   description: {
     type: String,
     required: true,

@@ -71,6 +71,9 @@ const Sidebar = () => {
             <a href="/Dashboard" className="hover:underline">Dashboard</a>
           </li>
           <li className="">
+            <a href="/UserManagement" className="hover:underline">User Management</a>
+          </li>
+          <li className="">
             <a href="/Settings" className="hover:underline">Settings</a>
           </li>
         </ul>

@@ -15,28 +15,31 @@ interface Api {
   lastScanned: string;
   version: string;
   description: string;
+  role: string;
 }
 
 // Define types for new API entry
 interface NewApi {
   name: string;
   endpoint: string;
+  description: string;
   owner: string;
   status: string;
-  role: string;
   lastScanned: string;
   version: string;
-  description: string;
+  role: string;
 }
-
-const ApiInventory: React.FC = () => {
+  const token = localStorage.getItem("token");
+  const decodedToken = jwtDecode(token);
+  const userRole = decodedToken.role;
+  const ApiInventory: React.FC = () => {
   const [apiList, setApiList] = useState<Api[]>([]);
   const [newApi, setNewApi] = useState<NewApi>({
     name: "",
     endpoint: "",
     owner: "",
     status: "Active",
-    role: "",
+    role: userRole,
     lastScanned: "",
     version: "",
     description: ""
@@ -46,11 +49,10 @@ const ApiInventory: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<"ascending" | "descending">("ascending");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    
     const fetchApiData = async () => {
       try {
-            const decodedToken = jwtDecode(token);
-            const userRole = decodedToken.role;
+            
             const URL = `http://localhost:5000/api/${userRole}/api`;
             const response = await fetch(URL, {
           method: "GET",
@@ -124,6 +126,7 @@ const ApiInventory: React.FC = () => {
   const handleAddApi = async () => {
     const token = localStorage.getItem("token");
     const newApiEntry = { ...newApi };
+    console.log(newApiEntry);
 
     try {
       const response = await fetch("http://localhost:5000/api/api/add", {
@@ -272,6 +275,13 @@ const ApiInventory: React.FC = () => {
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>
+              {/* <select
+                value={newApi.role}
+                onChange={(e) => setNewApi({ ...newApi, role: e.target.value })}
+                className="p-2 border border-gray-300 rounded"
+              >
+                <option value={userRole}>{userRole}</option>
+              </select> */}
             </div>
             <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Add API</button>
           </form>

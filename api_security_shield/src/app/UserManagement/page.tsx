@@ -5,13 +5,17 @@ import Modal from "react-modal";
 import Layout from "@/components/Layout";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import Link from "next/link";
+import router from "next/router";
 
 const UserManagement = () => {
+  const roles = ["Admin", "Security Analyst", "Developer"];
+  const token = localStorage.getItem("token");
+  const decodedToken = jwtDecode(token);
+  const userRole = decodedToken.role;
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const [activityLogs, setActivityLogs] = useState([]);
-  const [filteredLogs, setFilteredLogs] = useState([]);
-  const [newUser, setNewUser] = useState({ username: "", fullName: "", email: "", password: "", role: "", status: "" });
+  const [newUser, setNewUser] = useState({ username: "", fullName: "", email: "", password: "", role: "" });
   const [editUser, setEditUser] = useState(null);
   const [deleteUser, setDeleteUser] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -21,27 +25,20 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  const roles = ["Admin", "Security Analyst", "Developer"];
-  const statuses = ["Active", "Inactive"];
-  const token = localStorage.getItem("token");
+  
+
   useEffect(() => {
-    
     fetchUsers();
-    fetchActivityLogs();
   }, []);
 
   useEffect(() => {
     filterUsers(searchTerm, roleFilter, statusFilter);
   }, [users, searchTerm, roleFilter, statusFilter]);
 
-  useEffect(() => {
-    filterLogs(searchTerm);
-  }, [activityLogs, searchTerm]);
+
 
   const fetchUsers = async () => {
     try {
-      const decodedToken = jwtDecode(token);
-      const userRole = decodedToken.role;
       if(userRole == "admin"){
       const response = await fetch("http://localhost:5000/api/users", {
         method: "GET",
@@ -54,22 +51,14 @@ const UserManagement = () => {
       setUsers(data);
       }
       else{
-        alert("Unauthorized Access!!");
-        
+        router.push("/Dashboard");
       }
     } catch (error) {
       console.error("Error fetching users:", error);
     }
   };
 
-  const fetchActivityLogs = async () => {
-    try {
-      const response = await axios.get('/activity-logs');
-      setActivityLogs(response.data);
-    } catch (error) {
-      console.error("Error fetching activity logs:", error);
-    }
-  };
+
 
   const handleSearch = (e) => setSearchTerm(e.target.value);
   const handleRoleFilter = (e) => setRoleFilter(e.target.value);
@@ -83,26 +72,44 @@ const UserManagement = () => {
     setFilteredUsers(result);
   };
 
-  const filterLogs = (search) => {
-    let result = activityLogs;
-    if (search) result = result.filter(log => log.username.includes(search));
-    setFilteredLogs(result);
-  };
 
   const handleAddUser = async () => {
     try {
-      const response = await axios.post('/users', newUser);
-      setUsers([...users, response.data.user]);
-      setNewUser({ username: "", fullName: "", email: "", password: "", role: "", status: "" });
+      const newUserEntry = { ...newUser}
+      console.log(newUserEntry);
+      const response = await fetch("http://localhost:5000/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newUserEntry),
+      });
+  
+      if (response.ok) {
+        const addedUser = await response.json();
+        console.log(addedUser);
+        setUsers((prevUserList) => [...prevUserList, addedUser]); // Ensure you access `addedUser.user`
+        setNewUser({ username: "", fullName: "", email: "", password: "", role: "" });
+        alert("User added successfully");
+      } else {
+        console.error("Failed to add User");
+        alert("Failed to add User. Please try again.");
+      }
       closeModal('add');
     } catch (error) {
       console.error("Error adding user:", error);
     }
   };
+  
 
   const handleEditUser = async () => {
     try {
-      const response = await axios.put(`/users/${editUser._id}`, editUser);
+      const response = await axios.put(`http://localhost:5000/api/users/${editUser._id}`, editUser, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setUsers(users.map(user => user._id === response.data._id ? response.data : user));
       setEditUser(null);
       closeModal('edit');
@@ -110,12 +117,14 @@ const UserManagement = () => {
       console.error("Error updating user:", error);
     }
   };
-
+  
   const handleDeleteUser = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/users/${deleteUser._id}`, {headers: {
-        Authorization: `Bearer ${token}`,
-      }});
+      await axios.delete(`http://localhost:5000/api/users/${deleteUser._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setUsers(users.filter(user => user._id !== deleteUser._id));
       setDeleteUser(null);
       closeModal('delete');
@@ -123,6 +132,7 @@ const UserManagement = () => {
       console.error("Error deleting user:", error);
     }
   };
+  
 
   const openEditModal = (user) => {
     setEditUser(user);
@@ -152,10 +162,6 @@ const UserManagement = () => {
             <option value="">All Roles</option>
             {roles.map(role => <option key={role} value={role}>{role}</option>)}
           </select>
-          <select onChange={handleStatusFilter} value={statusFilter} className="border rounded p-2 ml-2">
-            <option value="">All Statuses</option>
-            {statuses.map(status => <option key={status} value={status}>{status}</option>)}
-          </select>
           <button onClick={() => setIsAddModalOpen(true)} className="bg-blue-500 text-white rounded px-4 ml-2">Add User</button>
         </div>
 
@@ -166,8 +172,6 @@ const UserManagement = () => {
               <th className="border border-gray-300 p-2">Full Name</th>
               <th className="border border-gray-300 p-2">Email</th>
               <th className="border border-gray-300 p-2">Role</th>
-              <th className="border border-gray-300 p-2">Last Login</th>
-              <th className="border border-gray-300 p-2">Status</th>
               <th className="border border-gray-300 p-2">Actions</th>
             </tr>
           </thead>
@@ -178,8 +182,6 @@ const UserManagement = () => {
                 <td className="border border-gray-300 p-2">{user.fullName}</td>
                 <td className="border border-gray-300 p-2">{user.email}</td>
                 <td className="border border-gray-300 p-2">{user.role}</td>
-                <td className="border border-gray-300 p-2">{user.lastLogin}</td>
-                <td className="border border-gray-300 p-2">{user.status}</td>
                 <td className="border border-gray-300 p-2">
                   <button onClick={() => openEditModal(user)} className="text-blue-600">Edit</button>
                   <button onClick={() => { setDeleteUser(user); setIsDeleteModalOpen(true); }} className="text-red-600 ml-2">Delete</button>
@@ -199,10 +201,6 @@ const UserManagement = () => {
             <select onChange={e => setNewUser({ ...newUser, role: e.target.value })} value={newUser.role} className="border rounded p-2 w-full mb-2" required>
               <option value="">Select Role</option>
               {roles.map(role => <option key={role} value={role}>{role}</option>)}
-            </select>
-            <select onChange={e => setNewUser({ ...newUser, status: e.target.value })} value={newUser.status} className="border rounded p-2 w-full mb-2" required>
-              <option value="">Select Status</option>
-              {statuses.map(status => <option key={status} value={status}>{status}</option>)}
             </select>
             <button type="button" onClick={handleAddUser} className="bg-blue-500 text-white rounded px-4 py-2">Add User</button>
             <button type="button" onClick={() => closeModal('add')} className="bg-gray-500 text-white rounded px-4 py-2 ml-2">Cancel</button>
@@ -240,17 +238,6 @@ const UserManagement = () => {
             </div>
           )}
         </Modal>
-
-        <h2 className="text-2xl font-bold text-blue-900 mb-4">Activity Logs</h2>
-        <div className="flex mb-4">
-          <input
-            type="text"
-            placeholder="Search by Username"
-            value={searchTerm}
-            onChange={handleSearch}
-            className="border rounded p-2 w-full"
-          />
-        </div>
       </div>
     </Layout>
   );

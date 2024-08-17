@@ -7,6 +7,10 @@ const userSchema = new Schema({
     required: true,
     unique: true,
   },
+  fullName: {
+    type: String,
+    required: true,
+  },
   email: {
     type: String,
     required: true,
@@ -18,19 +22,6 @@ const userSchema = new Schema({
   },
   role: {
     type: String,
-    required: true,
-  },
-  status: {
-    type: String,
-    required: true,
-  },
-  description: {
-    type: String,
-    required: true,
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
     required: true,
   },
 });

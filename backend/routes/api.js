@@ -88,9 +88,9 @@ router.post("/login", async (req, res) => {
 // Existing API routes
 router.post("/api/add", verifyToken, async (req, res) => {
   try {
-    const { name, endpoint, owner, status, version, description } = req.body;
+    const { name, endpoint, owner, status, version, description, role } = req.body;
 
-    if (!name || !endpoint || !owner || !status || !version || !description) {
+    if (!name || !endpoint || !owner || !status || !version || !description || !role) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -103,6 +103,7 @@ router.post("/api/add", verifyToken, async (req, res) => {
       creationDate: new Date(),
       version,
       description,
+      role,
     });
 
     await newAPI.save();
@@ -170,18 +171,18 @@ router.get("/users", verifyToken, async (req, res) => {
 
 router.post("/users", verifyToken, async (req, res) => {
   try {
-    const { email, password, phone, username, role } = req.body;
-
-    if (!email || !password || !phone || !username || !role) {
-      return res.status(400).json({ message: "All fields are required" });
+    const { email, password, fullName, username, role } = req.body;
+    console.log(req.body);
+    if (!email || !password || !fullName || !username || !role) {
+      return res.status(444).json({ message: "All fields are required" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       username,
       email,
-      password: hashedPassword,
-      phone,
+      password,
+      fullName,
       role,
     });
     await newUser.save();
@@ -226,36 +227,7 @@ router.delete("/users/:userId", verifyToken, async (req, res) => {
   }
 });
 
-// New API routes for activity logs
-router.get("/activity-logs", verifyToken, async (req, res) => {
-  try {
-    const logs = await ActivityLog.find();
-    res.status(200).json(logs);
-  } catch (error) {
-    console.error("Error fetching activity logs:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
 
-router.post("/activity-logs", verifyToken, async (req, res) => {
-  try {
-    const { action, description, timestamp } = req.body;
-
-    if (!action || !description || !timestamp) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const newLog = new ActivityLog({ action, description, timestamp });
-    await newLog.save();
-
-    res
-      .status(201)
-      .json({ message: "Activity log added successfully", log: newLog });
-  } catch (error) {
-    console.error("Error adding activity log:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
